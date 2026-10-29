@@ -1,0 +1,48 @@
+# ─── Go ───────────────────────────────────────────────────────────────────────
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin/
+/dist/
+vendor/
+
+# Go test binaries and coverage
+*.test
+*.out
+coverage.out
+coverage.html
+
+# ─── Environment ──────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ─── Node.js / Frontend ───────────────────────────────────────────────────────
+node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/
+*.tsbuildinfo
+
+# ─── Editors ──────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+docker-compose.override.yml
+
+# ─── Database dumps ───────────────────────────────────────────────────────────
+*.sql.gz
+*.dump
+*.pgdump
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
