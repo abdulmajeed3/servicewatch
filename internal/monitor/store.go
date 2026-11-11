@@ -25,16 +25,16 @@ func (s *Store) Create(ctx context.Context, userID int64, req *CreateRequest) (*
 	var m Monitor
 	err := s.db.QueryRow(ctx,
 		`INSERT INTO monitors
-		   (user_id, name, url, check_interval, request_timeout, expected_status)
-		 VALUES ($1,$2,$3,$4,$5,$6)
+		   (user_id, name, url, check_interval, request_timeout, expected_status, notes)
+		 VALUES ($1,$2,$3,$4,$5,$6,$7)
 		 RETURNING id, user_id, name, url, check_interval, request_timeout, expected_status,
 		           status, is_active, next_check_at, last_checked_at, last_status_code,
-		           last_response_ms, consecutive_failures, created_at, updated_at`,
-		userID, req.Name, req.URL, req.CheckInterval, req.RequestTimeout, req.ExpectedStatus,
+		           last_response_ms, consecutive_failures, notes, created_at, updated_at`,
+		userID, req.Name, req.URL, req.CheckInterval, req.RequestTimeout, req.ExpectedStatus, req.Notes,
 	).Scan(
 		&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 		&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
-		&m.LastResponseMs, &m.ConsecutiveFailures, &m.CreatedAt, &m.UpdatedAt,
+		&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("create monitor: %w", err)
@@ -48,13 +48,13 @@ func (s *Store) GetByID(ctx context.Context, id int64) (*Monitor, error) {
 	err := s.db.QueryRow(ctx,
 		`SELECT id, user_id, name, url, check_interval, request_timeout, expected_status,
 		        status, is_active, next_check_at, last_checked_at, last_status_code,
-		        last_response_ms, consecutive_failures, created_at, updated_at
+		        last_response_ms, consecutive_failures, notes, created_at, updated_at
 		 FROM monitors WHERE id = $1`,
 		id,
 	).Scan(
 		&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 		&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
-		&m.LastResponseMs, &m.ConsecutiveFailures, &m.CreatedAt, &m.UpdatedAt,
+		&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -117,7 +117,7 @@ func (s *Store) List(ctx context.Context, userID int64, f ListFilter) (*ListResu
 	rows, err := s.db.Query(ctx,
 		fmt.Sprintf(`SELECT id, user_id, name, url, check_interval, request_timeout, expected_status,
 		        status, is_active, next_check_at, last_checked_at, last_status_code,
-		        last_response_ms, consecutive_failures, created_at, updated_at
+		        last_response_ms, consecutive_failures, notes, created_at, updated_at
 		 FROM monitors %s
 		 ORDER BY created_at DESC
 		 LIMIT $%d OFFSET $%d`, where, argIdx, argIdx+1),
@@ -134,7 +134,7 @@ func (s *Store) List(ctx context.Context, userID int64, f ListFilter) (*ListResu
 		if err := rows.Scan(
 			&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 			&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
-			&m.LastResponseMs, &m.ConsecutiveFailures, &m.CreatedAt, &m.UpdatedAt,
+			&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan monitor: %w", err)
 		}
@@ -158,16 +158,16 @@ func (s *Store) Update(ctx context.Context, id int64, req *UpdateRequest) (*Moni
 	err := s.db.QueryRow(ctx,
 		`UPDATE monitors
 		 SET name = $1, url = $2, check_interval = $3, request_timeout = $4,
-		     expected_status = $5, updated_at = NOW()
-		 WHERE id = $6
+		     expected_status = $5, notes = $6, updated_at = NOW()
+		 WHERE id = $7
 		 RETURNING id, user_id, name, url, check_interval, request_timeout, expected_status,
 		           status, is_active, next_check_at, last_checked_at, last_status_code,
-		           last_response_ms, consecutive_failures, created_at, updated_at`,
-		req.Name, req.URL, req.CheckInterval, req.RequestTimeout, req.ExpectedStatus, id,
+		           last_response_ms, consecutive_failures, notes, created_at, updated_at`,
+		req.Name, req.URL, req.CheckInterval, req.RequestTimeout, req.ExpectedStatus, req.Notes, id,
 	).Scan(
 		&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 		&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
-		&m.LastResponseMs, &m.ConsecutiveFailures, &m.CreatedAt, &m.UpdatedAt,
+		&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -203,12 +203,12 @@ func (s *Store) setActive(ctx context.Context, id int64, active bool) (*Monitor,
 		 WHERE id = $4
 		 RETURNING id, user_id, name, url, check_interval, request_timeout, expected_status,
 		           status, is_active, next_check_at, last_checked_at, last_status_code,
-		           last_response_ms, consecutive_failures, created_at, updated_at`,
+		           last_response_ms, consecutive_failures, notes, created_at, updated_at`,
 		active, string(status), nextCheck, id,
 	).Scan(
 		&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 		&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
-		&m.LastResponseMs, &m.ConsecutiveFailures, &m.CreatedAt, &m.UpdatedAt,
+		&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
 	)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, ErrNotFound
@@ -269,7 +269,7 @@ func (s *Store) DueMonitors(ctx context.Context, limit int) ([]*Monitor, error) 
 	rows, err := s.db.Query(ctx,
 		`SELECT id, user_id, name, url, check_interval, request_timeout, expected_status,
 		        status, is_active, next_check_at, last_checked_at, last_status_code,
-		        last_response_ms, consecutive_failures, created_at, updated_at
+		        last_response_ms, consecutive_failures, notes, created_at, updated_at
 		 FROM monitors
 		 WHERE is_active = TRUE AND next_check_at <= NOW()
 		 ORDER BY next_check_at ASC
@@ -287,13 +287,40 @@ func (s *Store) DueMonitors(ctx context.Context, limit int) ([]*Monitor, error) 
 		if err := rows.Scan(
 			&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 			&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
-			&m.LastResponseMs, &m.ConsecutiveFailures, &m.CreatedAt, &m.UpdatedAt,
+			&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan due monitor: %w", err)
 		}
 		monitors = append(monitors, &m)
 	}
 	return monitors, rows.Err()
+}
+
+// UpdateStatusOnly updates the monitor's status and last-check fields without
+// advancing next_check_at. Used for on-demand checks that should not disturb
+// the normal schedule.
+func (s *Store) UpdateStatusOnly(ctx context.Context, id int64, success bool, statusCode, responseMs int) error {
+	newStatus := StatusDown
+	if success {
+		newStatus = StatusUp
+	}
+
+	consecutiveUpdate := "consecutive_failures + 1"
+	if success {
+		consecutiveUpdate = "0"
+	}
+
+	_, err := s.db.Exec(ctx,
+		fmt.Sprintf(`UPDATE monitors
+		 SET status = $1, last_checked_at = NOW(), last_status_code = $2,
+		     last_response_ms = $3, consecutive_failures = %s, updated_at = NOW()
+		 WHERE id = $4`, consecutiveUpdate),
+		string(newStatus), statusCode, responseMs, id,
+	)
+	if err != nil {
+		return fmt.Errorf("update status only: %w", err)
+	}
+	return nil
 }
 
 // UpdateAfterCheck updates monitor state after a check completes.

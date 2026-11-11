@@ -118,6 +118,43 @@ func (s *Scheduler) dispatch(ctx context.Context, sem chan struct{}, wg *sync.Wa
 	}
 }
 
+// CheckNow runs an immediate check for the given monitor outside the normal
+// schedule. It records results and updates monitor status but does not advance
+// next_check_at, so the existing schedule is preserved.
+func (s *Scheduler) CheckNow(ctx context.Context, m *monitor.Monitor) checker.Result {
+	timeout := time.Duration(m.RequestTimeout) * time.Second
+	result := s.checker.Check(ctx, m.URL, m.ExpectedStatus, timeout)
+
+	if err := s.historyStore.Record(ctx, m.ID, m.UserID,
+		result.IsSuccess, result.StatusCode, result.ResponseMs, result.FailureReason); err != nil {
+		s.log.Error("check now: record check", "monitor_id", m.ID, "err", err)
+	}
+
+	if err := s.monitorStore.UpdateStatusOnly(ctx, m.ID,
+		result.IsSuccess, result.StatusCode, result.ResponseMs); err != nil {
+		s.log.Error("check now: update status", "monitor_id", m.ID, "err", err)
+	}
+
+	if !result.IsSuccess {
+		if _, err := s.incidentStore.OpenIncident(ctx, m.ID, m.UserID); err != nil {
+			s.log.Error("check now: open incident", "monitor_id", m.ID, "err", err)
+		}
+	} else {
+		if err := s.incidentStore.ResolveIncident(ctx, m.ID); err != nil {
+			s.log.Error("check now: resolve incident", "monitor_id", m.ID, "err", err)
+		}
+	}
+
+	s.log.Info("on-demand check complete",
+		"monitor_id", m.ID,
+		"url", m.URL,
+		"success", result.IsSuccess,
+		"status_code", result.StatusCode,
+		"response_ms", result.ResponseMs,
+	)
+	return result
+}
+
 func (s *Scheduler) runCheck(ctx context.Context, m *monitor.Monitor) {
 	timeout := time.Duration(m.RequestTimeout) * time.Second
 	result := s.checker.Check(ctx, m.URL, m.ExpectedStatus, timeout)

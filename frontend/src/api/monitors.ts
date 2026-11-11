@@ -5,6 +5,7 @@ import type {
   CreateMonitorInput,
   DashboardResponse,
   CheckListResult,
+  CheckResult,
   AvailabilityStat,
   ResponseTimePoint,
   IncidentListResult,
@@ -43,6 +44,10 @@ export function pauseMonitor(id: number): Promise<Monitor> {
 
 export function resumeMonitor(id: number): Promise<Monitor> {
   return api.post<Monitor>(`/monitors/${id}/resume`)
+}
+
+export function checkNowMonitor(id: number): Promise<CheckResult> {
+  return api.post<CheckResult>(`/monitors/${id}/check`)
 }
 
 export function deleteMonitor(id: number): Promise<void> {

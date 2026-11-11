@@ -52,15 +52,23 @@ func (h *DashboardHandler) Stats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	overallAvail, err := h.historyStore.OverallAvailability(r.Context(), userID, 24)
+	if err != nil {
+		mw.WriteError(w, http.StatusInternalServerError, "could not fetch availability")
+		return
+	}
+
 	type dashboardResponse struct {
-		Stats           *monitor.DashboardStats `json:"stats"`
-		RecentFailures  any                     `json:"recent_failures"`
-		RecentIncidents any                     `json:"recent_incidents"`
+		Stats                  *monitor.DashboardStats `json:"stats"`
+		OverallAvailability24h float64                 `json:"overall_availability_24h"`
+		RecentFailures         any                     `json:"recent_failures"`
+		RecentIncidents        any                     `json:"recent_incidents"`
 	}
 
 	mw.WriteJSON(w, http.StatusOK, dashboardResponse{
-		Stats:           stats,
-		RecentFailures:  recentFailures,
-		RecentIncidents: recentIncidents,
+		Stats:                  stats,
+		OverallAvailability24h: overallAvail,
+		RecentFailures:         recentFailures,
+		RecentIncidents:        recentIncidents,
 	})
 }

@@ -32,6 +32,7 @@ export interface Monitor {
   last_status_code: number | null
   last_response_ms: number | null
   consecutive_failures: number
+  notes: string
   created_at: string
   updated_at: string
 }
@@ -49,6 +50,7 @@ export interface CreateMonitorInput {
   check_interval: number
   request_timeout: number
   expected_status: number
+  notes: string
 }
 
 export interface DashboardStats {
@@ -62,6 +64,7 @@ export interface DashboardStats {
 export interface MonitorCheck {
   id: number
   monitor_id: number
+  monitor_name?: string
   user_id: number
   checked_at: string
   is_success: boolean
@@ -69,6 +72,14 @@ export interface MonitorCheck {
   response_ms: number | null
   failure_reason: string | null
   created_at: string
+}
+
+export interface CheckResult {
+  is_success: boolean
+  status_code: number
+  response_ms: number
+  failure_reason: string
+  checked_at: string
 }
 
 export interface CheckListResult {
@@ -94,6 +105,7 @@ export interface ResponseTimePoint {
 export interface Incident {
   id: number
   monitor_id: number
+  monitor_name?: string
   user_id: number
   started_at: string
   resolved_at: string | null
@@ -112,6 +124,7 @@ export interface IncidentListResult {
 
 export interface DashboardResponse {
   stats: DashboardStats
+  overall_availability_24h: number
   recent_failures: MonitorCheck[]
   recent_incidents: Incident[]
 }

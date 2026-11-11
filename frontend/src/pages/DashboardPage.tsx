@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Activity, TrendingUp, TrendingDown, PauseCircle, AlertCircle, Plus } from 'lucide-react'
+import { Activity, TrendingUp, TrendingDown, PauseCircle, AlertCircle, Plus, Gauge } from 'lucide-react'
 import { getDashboard } from '../api/monitors'
 import { Card, CardHeader, CardTitle } from '../components/ui/Card'
 import { StatusBadge } from '../components/ui/StatusBadge'
@@ -50,7 +50,7 @@ export function DashboardPage() {
     )
   }
 
-  const { stats, recent_failures, recent_incidents } = data
+  const { stats, overall_availability_24h, recent_failures, recent_incidents } = data
 
   return (
     <div className="space-y-6">
@@ -71,6 +71,21 @@ export function DashboardPage() {
         <StatCard label="Down" value={stats.down} icon={TrendingDown} color="bg-red-500" />
         <StatCard label="Paused" value={stats.paused} icon={PauseCircle} color="bg-gray-400" />
       </div>
+
+      {/* Overall availability banner */}
+      {stats.total > 0 && (
+        <Card className="flex items-center gap-4">
+          <div className="rounded-lg bg-indigo-500 p-3">
+            <Gauge className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <p className="text-2xl font-bold text-gray-900 dark:text-white">
+              {overall_availability_24h.toFixed(2)}%
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Overall availability (last 24h)</p>
+          </div>
+        </Card>
+      )}
 
       {/* Empty state */}
       {stats.total === 0 && (
@@ -98,17 +113,21 @@ export function DashboardPage() {
             </CardHeader>
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {recent_failures.map((check) => (
-                <div key={check.id} className="flex items-center justify-between px-6 py-3">
+                <Link
+                  key={check.id}
+                  to={`/monitors/${check.monitor_id}`}
+                  className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                >
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Monitor #{check.monitor_id}
+                      {check.monitor_name ?? `Monitor #${check.monitor_id}`}
                     </p>
                     <p className="text-xs text-red-600 dark:text-red-400">
                       {check.failure_reason ?? `HTTP ${check.status_code}`}
                     </p>
                   </div>
                   <span className="text-xs text-gray-400">{formatDistanceToNow(check.checked_at)}</span>
-                </div>
+                </Link>
               ))}
             </div>
           </Card>
@@ -122,10 +141,14 @@ export function DashboardPage() {
             </CardHeader>
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {recent_incidents.map((inc) => (
-                <div key={inc.id} className="flex items-center justify-between px-6 py-3">
+                <Link
+                  key={inc.id}
+                  to={`/monitors/${inc.monitor_id}`}
+                  className="flex items-center justify-between px-6 py-3 hover:bg-gray-50 dark:hover:bg-gray-800/40"
+                >
                   <div>
                     <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      Monitor #{inc.monitor_id}
+                      {inc.monitor_name ?? `Monitor #${inc.monitor_id}`}
                     </p>
                     <p className="text-xs text-gray-500">
                       {inc.failure_count} failure{inc.failure_count !== 1 ? 's' : ''}
@@ -135,7 +158,7 @@ export function DashboardPage() {
                     <StatusBadge status={inc.resolved_at ? 'up' : 'down'} />
                     <p className="mt-1 text-xs text-gray-400">{formatDistanceToNow(inc.started_at)}</p>
                   </div>
-                </div>
+                </Link>
               ))}
             </div>
           </Card>

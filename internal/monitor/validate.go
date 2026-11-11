@@ -10,21 +10,25 @@ import (
 
 // Validate checks a CreateRequest for correctness.
 func (r *CreateRequest) Validate() error {
-	return validateFields(r.Name, r.URL, r.CheckInterval, r.RequestTimeout, r.ExpectedStatus)
+	return validateFields(r.Name, r.URL, r.Notes, r.CheckInterval, r.RequestTimeout, r.ExpectedStatus)
 }
 
 // Validate checks an UpdateRequest for correctness.
 func (r *UpdateRequest) Validate() error {
-	return validateFields(r.Name, r.URL, r.CheckInterval, r.RequestTimeout, r.ExpectedStatus)
+	return validateFields(r.Name, r.URL, r.Notes, r.CheckInterval, r.RequestTimeout, r.ExpectedStatus)
 }
 
-func validateFields(name, rawURL string, interval, timeout, expectedStatus int) error {
+func validateFields(name, rawURL, notes string, interval, timeout, expectedStatus int) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
 		return fmt.Errorf("%w: name is required", ErrInvalidInput)
 	}
 	if len(name) > 200 {
 		return fmt.Errorf("%w: name must be at most 200 characters", ErrInvalidInput)
+	}
+
+	if len(notes) > 500 {
+		return fmt.Errorf("%w: notes must be at most 500 characters", ErrInvalidInput)
 	}
 
 	if err := validateURL(rawURL); err != nil {

@@ -6,6 +6,7 @@ import "time"
 type Check struct {
 	ID            int64     `json:"id"`
 	MonitorID     int64     `json:"monitor_id"`
+	MonitorName   string    `json:"monitor_name,omitempty"`
 	UserID        int64     `json:"user_id"`
 	CheckedAt     time.Time `json:"checked_at"`
 	IsSuccess     bool      `json:"is_success"`

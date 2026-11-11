@@ -12,6 +12,7 @@ import (
 	"github.com/amsoft/servicewatch/internal/history"
 	"github.com/amsoft/servicewatch/internal/incident"
 	"github.com/amsoft/servicewatch/internal/monitor"
+	"github.com/amsoft/servicewatch/internal/scheduler"
 )
 
 // NewRouter assembles the HTTP router with all routes and middleware applied.
@@ -21,10 +22,11 @@ func NewRouter(
 	monSvc *monitor.Service,
 	histStore *history.Store,
 	incStore *incident.Store,
+	sched *scheduler.Scheduler,
 	corsOrigins []string,
 ) http.Handler {
 	authHandler := handlers.NewAuthHandler(authSvc)
-	monHandler := handlers.NewMonitorHandler(monSvc)
+	monHandler := handlers.NewMonitorHandler(monSvc, sched)
 	histHandler := handlers.NewHistoryHandler(histStore)
 	incHandler := handlers.NewIncidentHandler(incStore)
 	dashHandler := handlers.NewDashboardHandler(monSvc, histStore, incStore)
@@ -57,6 +59,7 @@ func NewRouter(
 	router.Handler(http.MethodDelete, "/api/v1/monitors/:id", authed(http.HandlerFunc(monHandler.Delete)))
 	router.Handler(http.MethodPost, "/api/v1/monitors/:id/pause", authed(http.HandlerFunc(monHandler.Pause)))
 	router.Handler(http.MethodPost, "/api/v1/monitors/:id/resume", authed(http.HandlerFunc(monHandler.Resume)))
+	router.Handler(http.MethodPost, "/api/v1/monitors/:id/check", authed(http.HandlerFunc(monHandler.CheckNow)))
 
 	// Monitor check history.
 	router.Handler(http.MethodGet, "/api/v1/monitors/:id/checks", authed(http.HandlerFunc(histHandler.List)))

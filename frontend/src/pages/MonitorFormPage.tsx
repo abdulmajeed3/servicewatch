@@ -28,6 +28,7 @@ const schema = z.object({
   check_interval: z.number().int().min(60),
   request_timeout: z.number().int().min(5).max(120),
   expected_status: z.number().int().min(0).max(599),
+  notes: z.string().max(500, 'Notes must be at most 500 characters'),
 })
 type FormData = z.infer<typeof schema>
 
@@ -55,6 +56,7 @@ export function MonitorFormPage() {
       check_interval: 300,
       request_timeout: 30,
       expected_status: 0,
+      notes: '',
     },
   })
 
@@ -66,6 +68,7 @@ export function MonitorFormPage() {
         check_interval: existing.check_interval,
         request_timeout: existing.request_timeout,
         expected_status: existing.expected_status,
+        notes: existing.notes ?? '',
       })
     }
   }, [existing, reset])
@@ -148,6 +151,22 @@ export function MonitorFormPage() {
             error={errors.expected_status?.message}
             helpText="Set to 0 to accept any 2xx response"
           />
+
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Notes <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <textarea
+              {...register('notes')}
+              rows={3}
+              maxLength={500}
+              placeholder="Any notes about this monitor, e.g. team contact, expected downtime windows…"
+              className="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
+            />
+            {errors.notes && (
+              <p className="text-xs text-red-600 dark:text-red-400">{errors.notes.message}</p>
+            )}
+          </div>
 
           <div className="flex gap-3 pt-2">
             <Button type="submit" loading={mutation.isPending}>

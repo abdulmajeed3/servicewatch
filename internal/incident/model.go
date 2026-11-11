@@ -6,6 +6,7 @@ import "time"
 type Incident struct {
 	ID            int64      `json:"id"`
 	MonitorID     int64      `json:"monitor_id"`
+	MonitorName   string     `json:"monitor_name,omitempty"`
 	UserID        int64      `json:"user_id"`
 	StartedAt     time.Time  `json:"started_at"`
 	ResolvedAt    *time.Time `json:"resolved_at"`

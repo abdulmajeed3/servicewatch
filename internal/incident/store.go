@@ -152,12 +152,16 @@ func (s *Store) List(ctx context.Context, monitorID, userID int64, f ListFilter)
 	return &ListResult{Incidents: incs, TotalCount: total, Page: f.Page, Limit: f.Limit}, nil
 }
 
-// ListForUser returns recent incidents across all monitors for a user.
+// ListForUser returns recent incidents across all monitors for a user,
+// joined with the monitor name for display purposes.
 func (s *Store) ListForUser(ctx context.Context, userID int64, limit int) ([]*Incident, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT id, monitor_id, user_id, started_at, resolved_at, failure_count, last_failure_at, created_at, updated_at
-		 FROM incidents WHERE user_id = $1
-		 ORDER BY started_at DESC LIMIT $2`,
+		`SELECT i.id, i.monitor_id, m.name, i.user_id, i.started_at, i.resolved_at,
+		        i.failure_count, i.last_failure_at, i.created_at, i.updated_at
+		 FROM incidents i
+		 JOIN monitors m ON m.id = i.monitor_id
+		 WHERE i.user_id = $1
+		 ORDER BY i.started_at DESC LIMIT $2`,
 		userID, limit,
 	)
 	if err != nil {
@@ -168,7 +172,7 @@ func (s *Store) ListForUser(ctx context.Context, userID int64, limit int) ([]*In
 	var incs []*Incident
 	for rows.Next() {
 		var inc Incident
-		if err := rows.Scan(&inc.ID, &inc.MonitorID, &inc.UserID, &inc.StartedAt, &inc.ResolvedAt,
+		if err := rows.Scan(&inc.ID, &inc.MonitorID, &inc.MonitorName, &inc.UserID, &inc.StartedAt, &inc.ResolvedAt,
 			&inc.FailureCount, &inc.LastFailureAt, &inc.CreatedAt, &inc.UpdatedAt); err != nil {
 			return nil, fmt.Errorf("scan incident: %w", err)
 		}

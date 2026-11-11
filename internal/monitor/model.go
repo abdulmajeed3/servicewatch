@@ -34,6 +34,7 @@ type Monitor struct {
 	LastStatusCode      *int       `json:"last_status_code"`
 	LastResponseMs      *int       `json:"last_response_ms"`
 	ConsecutiveFailures int        `json:"consecutive_failures"`
+	Notes               string     `json:"notes"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
 }
@@ -45,6 +46,7 @@ type CreateRequest struct {
 	CheckInterval  int    `json:"check_interval"`
 	RequestTimeout int    `json:"request_timeout"`
 	ExpectedStatus int    `json:"expected_status"`
+	Notes          string `json:"notes"`
 }
 
 // UpdateRequest is the payload for editing an existing monitor.
@@ -54,6 +56,7 @@ type UpdateRequest struct {
 	CheckInterval  int    `json:"check_interval"`
 	RequestTimeout int    `json:"request_timeout"`
 	ExpectedStatus int    `json:"expected_status"`
+	Notes          string `json:"notes"`
 }
 
 // ListFilter carries search/filter parameters for the monitor list.

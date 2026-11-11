@@ -1,23 +1,32 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 
+	"github.com/amsoft/servicewatch/internal/checker"
 	mw "github.com/amsoft/servicewatch/internal/http/middleware"
 	"github.com/amsoft/servicewatch/internal/monitor"
 	"github.com/julienschmidt/httprouter"
 )
 
-// MonitorHandler handles monitor management HTTP requests.
-type MonitorHandler struct {
-	svc *monitor.Service
+// onDemandChecker can run an immediate check outside the normal schedule.
+// *scheduler.Scheduler satisfies this interface.
+type onDemandChecker interface {
+	CheckNow(ctx context.Context, m *monitor.Monitor) checker.Result
 }
 
-func NewMonitorHandler(svc *monitor.Service) *MonitorHandler {
-	return &MonitorHandler{svc: svc}
+// MonitorHandler handles monitor management HTTP requests.
+type MonitorHandler struct {
+	svc     *monitor.Service
+	checker onDemandChecker
+}
+
+func NewMonitorHandler(svc *monitor.Service, checker onDemandChecker) *MonitorHandler {
+	return &MonitorHandler{svc: svc, checker: checker}
 }
 
 // Create handles POST /api/v1/monitors.
@@ -164,6 +173,37 @@ func (h *MonitorHandler) Resume(w http.ResponseWriter, r *http.Request) {
 	}
 
 	mw.WriteJSON(w, http.StatusOK, m)
+}
+
+// CheckNow handles POST /api/v1/monitors/:id/check.
+// It runs an immediate check outside the normal schedule and returns the result.
+// The monitor's next_check_at is not changed, so the existing schedule is preserved.
+func (h *MonitorHandler) CheckNow(w http.ResponseWriter, r *http.Request) {
+	claims, ok := mw.ClaimsFromContext(r.Context())
+	if !ok {
+		mw.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	id, err := parseIDParam(r)
+	if err != nil {
+		mw.WriteError(w, http.StatusBadRequest, "invalid monitor id")
+		return
+	}
+
+	m, err := h.svc.Get(r.Context(), id, claims.UserID)
+	if err != nil {
+		handleMonitorError(w, err)
+		return
+	}
+
+	if !m.IsActive {
+		mw.WriteError(w, http.StatusBadRequest, "cannot trigger a check on a paused monitor; resume it first")
+		return
+	}
+
+	result := h.checker.CheckNow(r.Context(), m)
+	mw.WriteJSON(w, http.StatusOK, result)
 }
 
 // Delete handles DELETE /api/v1/monitors/:id.

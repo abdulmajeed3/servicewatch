@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, Trash2, PauseCircle, PlayCircle, AlertCircle, Clock, Wifi } from 'lucide-react'
+import { Edit2, Trash2, PauseCircle, PlayCircle, AlertCircle, Clock, Wifi, RefreshCw } from 'lucide-react'
 import {
   getMonitor,
   deleteMonitor,
   pauseMonitor,
   resumeMonitor,
+  checkNowMonitor,
   getAvailability,
   getResponseTimes,
   getChecks,
@@ -61,6 +62,16 @@ export function MonitorDetailPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['monitor', id] }),
   })
 
+  const checkNowMut = useMutation({
+    mutationFn: () => checkNowMonitor(monitorId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['monitor', id] })
+      qc.invalidateQueries({ queryKey: ['checks', monitorId] })
+      qc.invalidateQueries({ queryKey: ['availability', monitorId] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+    },
+  })
+
   const deleteMut = useMutation({
     mutationFn: () => deleteMonitor(monitorId),
     onSuccess: () => {
@@ -89,7 +100,18 @@ export function MonitorDetailPage() {
           <StatusBadge status={monitor.status} />
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{monitor.name}</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          {monitor.is_active && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => checkNowMut.mutate()}
+              loading={checkNowMut.isPending}
+              title="Run an immediate check without changing the schedule"
+            >
+              <RefreshCw className="h-4 w-4" /> Check Now
+            </Button>
+          )}
           {monitor.is_active ? (
             <Button variant="secondary" size="sm" onClick={() => pauseMut.mutate()} loading={pauseMut.isPending}>
               <PauseCircle className="h-4 w-4" /> Pause
@@ -184,6 +206,14 @@ export function MonitorDetailPage() {
               View full history →
             </Link>
           </div>
+        </Card>
+      )}
+
+      {/* Notes */}
+      {monitor.notes && (
+        <Card>
+          <CardHeader><CardTitle>Notes</CardTitle></CardHeader>
+          <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{monitor.notes}</p>
         </Card>
       )}
 

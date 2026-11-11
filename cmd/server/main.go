@@ -63,11 +63,12 @@ func run(log *slog.Logger) error {
 	// ── Monitoring checker ────────────────────────────────────────────────────
 	chkr := checker.New(cfg.Monitor.DefaultTimeout, cfg.Monitor.AllowPrivateIPs, cfg.Monitor.MaxResponseBodyRead)
 
-	// ── Router ────────────────────────────────────────────────────────────────
-	handler := apphttp.NewRouter(db, authSvc, monSvc, histStore, incStore, cfg.Server.CORSOrigins)
+	// ── Scheduler (created before router so it can be injected for on-demand checks) ──
+	sched := scheduler.New(monStore, histStore, incStore, chkr,
+		cfg.Monitor.WorkerCount, cfg.Monitor.SchedulerInterval, log)
 
-	// Add request logging.
-	_ = log // logging middleware applied separately if needed
+	// ── Router ────────────────────────────────────────────────────────────────
+	handler := apphttp.NewRouter(db, authSvc, monSvc, histStore, incStore, sched, cfg.Server.CORSOrigins)
 
 	server := &http.Server{
 		Addr:         fmt.Sprintf("%s:%d", cfg.Server.Host, cfg.Server.Port),
@@ -76,10 +77,6 @@ func run(log *slog.Logger) error {
 		WriteTimeout: cfg.Server.WriteTimeout,
 		IdleTimeout:  cfg.Server.IdleTimeout,
 	}
-
-	// ── Scheduler ─────────────────────────────────────────────────────────────
-	sched := scheduler.New(monStore, histStore, incStore, chkr,
-		cfg.Monitor.WorkerCount, cfg.Monitor.SchedulerInterval, log)
 
 	bgCtx, bgCancel := context.WithCancel(context.Background())
 

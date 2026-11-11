@@ -163,13 +163,16 @@ func (s *Store) ResponseTimeSeries(ctx context.Context, monitorID, userID int64,
 	return points, rows.Err()
 }
 
-// RecentFailures returns the last N failed checks across all monitors for a user.
+// RecentFailures returns the last N failed checks across all monitors for a user,
+// joined with the monitor name for display purposes.
 func (s *Store) RecentFailures(ctx context.Context, userID int64, limit int) ([]*Check, error) {
 	rows, err := s.db.Query(ctx,
-		`SELECT id, monitor_id, user_id, checked_at, is_success, status_code, response_ms, failure_reason, created_at
-		 FROM monitor_checks
-		 WHERE user_id = $1 AND is_success = FALSE
-		 ORDER BY checked_at DESC
+		`SELECT mc.id, mc.monitor_id, m.name, mc.user_id, mc.checked_at, mc.is_success,
+		        mc.status_code, mc.response_ms, mc.failure_reason, mc.created_at
+		 FROM monitor_checks mc
+		 JOIN monitors m ON m.id = mc.monitor_id
+		 WHERE mc.user_id = $1 AND mc.is_success = FALSE
+		 ORDER BY mc.checked_at DESC
 		 LIMIT $2`,
 		userID, limit,
 	)
@@ -181,11 +184,31 @@ func (s *Store) RecentFailures(ctx context.Context, userID int64, limit int) ([]
 	var checks []*Check
 	for rows.Next() {
 		var c Check
-		if err := rows.Scan(&c.ID, &c.MonitorID, &c.UserID, &c.CheckedAt, &c.IsSuccess,
+		if err := rows.Scan(&c.ID, &c.MonitorID, &c.MonitorName, &c.UserID, &c.CheckedAt, &c.IsSuccess,
 			&c.StatusCode, &c.ResponseMs, &c.FailureReason, &c.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan failure: %w", err)
 		}
 		checks = append(checks, &c)
 	}
 	return checks, rows.Err()
+}
+
+// OverallAvailability calculates the aggregate availability percentage across
+// all monitors for a user over the given time window.
+func (s *Store) OverallAvailability(ctx context.Context, userID int64, windowHours int) (float64, error) {
+	since := time.Now().UTC().Add(-time.Duration(windowHours) * time.Hour)
+	var total, successful int
+	err := s.db.QueryRow(ctx,
+		`SELECT COUNT(*), COUNT(*) FILTER (WHERE is_success = TRUE)
+		 FROM monitor_checks
+		 WHERE user_id = $1 AND checked_at >= $2`,
+		userID, since,
+	).Scan(&total, &successful)
+	if err != nil {
+		return 0, fmt.Errorf("overall availability: %w", err)
+	}
+	if total == 0 {
+		return 0, nil
+	}
+	return float64(successful) / float64(total) * 100.0, nil
 }
