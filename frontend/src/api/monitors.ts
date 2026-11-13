@@ -50,6 +50,10 @@ export function checkNowMonitor(id: number): Promise<CheckResult> {
   return api.post<CheckResult>(`/monitors/${id}/check`)
 }
 
+export function cloneMonitor(id: number): Promise<Monitor> {
+  return api.post<Monitor>(`/monitors/${id}/clone`)
+}
+
 export function deleteMonitor(id: number): Promise<void> {
   return api.delete<void>(`/monitors/${id}`)
 }

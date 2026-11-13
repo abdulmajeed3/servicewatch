@@ -1,13 +1,14 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, Trash2, PauseCircle, PlayCircle, AlertCircle, Clock, Wifi, RefreshCw } from 'lucide-react'
+import { Edit2, Trash2, PauseCircle, PlayCircle, AlertCircle, Clock, Wifi, RefreshCw, Copy } from 'lucide-react'
 import {
   getMonitor,
   deleteMonitor,
   pauseMonitor,
   resumeMonitor,
   checkNowMonitor,
+  cloneMonitor,
   getAvailability,
   getResponseTimes,
   getChecks,
@@ -72,6 +73,15 @@ export function MonitorDetailPage() {
     },
   })
 
+  const cloneMut = useMutation({
+    mutationFn: () => cloneMonitor(monitorId),
+    onSuccess: (cloned) => {
+      qc.invalidateQueries({ queryKey: ['monitors'] })
+      qc.invalidateQueries({ queryKey: ['dashboard'] })
+      navigate(`/monitors/${cloned.id}`)
+    },
+  })
+
   const deleteMut = useMutation({
     mutationFn: () => deleteMonitor(monitorId),
     onSuccess: () => {
@@ -121,6 +131,15 @@ export function MonitorDetailPage() {
               <PlayCircle className="h-4 w-4" /> Resume
             </Button>
           )}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => cloneMut.mutate()}
+            loading={cloneMut.isPending}
+            title="Duplicate this monitor with the same configuration"
+          >
+            <Copy className="h-4 w-4" /> Clone
+          </Button>
           <Link to={`/monitors/${monitorId}/edit`}>
             <Button variant="secondary" size="sm"><Edit2 className="h-4 w-4" /> Edit</Button>
           </Link>

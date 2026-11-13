@@ -111,6 +111,37 @@ func (s *Service) Delete(ctx context.Context, id, userID int64) error {
 	return nil
 }
 
+// Clone duplicates an existing monitor for the same user.
+// The new monitor gets "Copy of " prepended to the original name,
+// starts with status "pending", and is scheduled for an immediate first check.
+func (s *Service) Clone(ctx context.Context, id, userID int64) (*Monitor, error) {
+	src, err := s.store.GetByIDForUser(ctx, id, userID)
+	if err != nil {
+		return nil, err
+	}
+
+	name := "Copy of " + src.Name
+	if len(name) > 200 {
+		name = name[:200]
+	}
+
+	req := &CreateRequest{
+		Name:           name,
+		URL:            src.URL,
+		CheckInterval:  src.CheckInterval,
+		RequestTimeout: src.RequestTimeout,
+		ExpectedStatus: src.ExpectedStatus,
+		Notes:          src.Notes,
+	}
+
+	m, err := s.store.Create(ctx, userID, req)
+	if err != nil {
+		return nil, fmt.Errorf("clone monitor: %w", err)
+	}
+	s.log.Info("monitor cloned", "source_id", id, "new_id", m.ID, "user_id", userID)
+	return m, nil
+}
+
 // DashboardStats returns aggregate counts for a user's monitors.
 func (s *Service) DashboardStats(ctx context.Context, userID int64) (*DashboardStats, error) {
 	return s.store.DashboardStats(ctx, userID)

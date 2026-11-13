@@ -206,6 +206,30 @@ func (h *MonitorHandler) CheckNow(w http.ResponseWriter, r *http.Request) {
 	mw.WriteJSON(w, http.StatusOK, result)
 }
 
+// Clone handles POST /api/v1/monitors/:id/clone.
+// Creates a copy of the monitor with "Copy of " prepended to its name.
+func (h *MonitorHandler) Clone(w http.ResponseWriter, r *http.Request) {
+	claims, ok := mw.ClaimsFromContext(r.Context())
+	if !ok {
+		mw.WriteError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+
+	id, err := parseIDParam(r)
+	if err != nil {
+		mw.WriteError(w, http.StatusBadRequest, "invalid monitor id")
+		return
+	}
+
+	m, err := h.svc.Clone(r.Context(), id, claims.UserID)
+	if err != nil {
+		handleMonitorError(w, err)
+		return
+	}
+
+	mw.WriteJSON(w, http.StatusCreated, m)
+}
+
 // Delete handles DELETE /api/v1/monitors/:id.
 func (h *MonitorHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	claims, ok := mw.ClaimsFromContext(r.Context())

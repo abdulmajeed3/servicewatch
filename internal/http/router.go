@@ -60,6 +60,7 @@ func NewRouter(
 	router.Handler(http.MethodPost, "/api/v1/monitors/:id/pause", authed(http.HandlerFunc(monHandler.Pause)))
 	router.Handler(http.MethodPost, "/api/v1/monitors/:id/resume", authed(http.HandlerFunc(monHandler.Resume)))
 	router.Handler(http.MethodPost, "/api/v1/monitors/:id/check", authed(http.HandlerFunc(monHandler.CheckNow)))
+	router.Handler(http.MethodPost, "/api/v1/monitors/:id/clone", authed(http.HandlerFunc(monHandler.Clone)))
 
 	// Monitor check history.
 	router.Handler(http.MethodGet, "/api/v1/monitors/:id/checks", authed(http.HandlerFunc(histHandler.List)))
