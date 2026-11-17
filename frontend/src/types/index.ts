@@ -35,6 +35,7 @@ export interface Monitor {
   notes: string
   created_at: string
   updated_at: string
+  availability_24h?: number | null
 }
 
 export interface MonitorListResult {

@@ -37,6 +37,8 @@ type Monitor struct {
 	Notes               string     `json:"notes"`
 	CreatedAt           time.Time  `json:"created_at"`
 	UpdatedAt           time.Time  `json:"updated_at"`
+	// Availability24h is populated only on list responses (via subquery). Absent on single-monitor fetches.
+	Availability24h *float64 `json:"availability_24h,omitempty"`
 }
 
 // CreateRequest is the payload for creating a new monitor.

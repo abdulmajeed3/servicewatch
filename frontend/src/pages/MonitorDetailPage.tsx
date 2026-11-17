@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Edit2, Trash2, PauseCircle, PlayCircle, AlertCircle, Clock, Wifi, RefreshCw, Copy } from 'lucide-react'
+import { Edit2, Trash2, PauseCircle, PlayCircle, AlertCircle, Clock, Wifi, RefreshCw, Copy, Timer } from 'lucide-react'
 import {
   getMonitor,
   deleteMonitor,
@@ -150,7 +150,7 @@ export function MonitorDetailPage() {
       </div>
 
       {/* Stats row */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card className="flex items-center gap-3">
           <Wifi className="h-5 w-5 text-blue-500 shrink-0" />
           <div>
@@ -171,6 +171,15 @@ export function MonitorDetailPage() {
             <p className="text-xs text-gray-500">24h Availability</p>
             <p className="text-sm font-medium text-gray-900 dark:text-white">
               {availability ? `${availability.availability.toFixed(1)}%` : '—'}
+            </p>
+          </div>
+        </Card>
+        <Card className="flex items-center gap-3">
+          <Timer className="h-5 w-5 text-teal-500 shrink-0" />
+          <div>
+            <p className="text-xs text-gray-500">Next Check</p>
+            <p className="text-sm font-medium text-gray-900 dark:text-white">
+              {monitor.is_active ? formatDistanceToNow(monitor.next_check_at) : 'Paused'}
             </p>
           </div>
         </Card>

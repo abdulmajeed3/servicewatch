@@ -104,6 +104,7 @@ export function MonitorListPage() {
                 <tr className="border-b border-gray-100 bg-gray-50 text-left text-xs font-medium uppercase text-gray-500 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400">
                   <th className="px-4 py-3">Monitor</th>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Uptime 24h</th>
                   <th className="px-4 py-3">Response</th>
                   <th className="px-4 py-3">Last Check</th>
                   <th className="px-4 py-3">Interval</th>
@@ -120,7 +121,23 @@ export function MonitorListPage() {
                       <p className="truncate text-xs text-gray-400 max-w-xs">{m.url}</p>
                     </td>
                     <td className="px-4 py-3">
-                      <StatusBadge status={m.status} />
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge status={m.status} />
+                        {m.consecutive_failures > 0 && m.status === 'down' && (
+                          <span className="text-xs font-semibold text-red-600 dark:text-red-400" title={`${m.consecutive_failures} consecutive failure${m.consecutive_failures !== 1 ? 's' : ''}`}>
+                            ×{m.consecutive_failures}
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      {m.availability_24h != null ? (
+                        <span className={`text-sm font-medium ${m.availability_24h >= 99 ? 'text-green-600 dark:text-green-400' : m.availability_24h >= 95 ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                          {m.availability_24h.toFixed(1)}%
+                        </span>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
                       {m.last_response_ms != null ? `${m.last_response_ms}ms` : '—'}

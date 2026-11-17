@@ -115,11 +115,20 @@ func (s *Store) List(ctx context.Context, userID int64, f ListFilter) (*ListResu
 
 	countArgs := append(args, f.Limit, offset)
 	rows, err := s.db.Query(ctx,
-		fmt.Sprintf(`SELECT id, user_id, name, url, check_interval, request_timeout, expected_status,
-		        status, is_active, next_check_at, last_checked_at, last_status_code,
-		        last_response_ms, consecutive_failures, notes, created_at, updated_at
-		 FROM monitors %s
-		 ORDER BY created_at DESC
+		fmt.Sprintf(`SELECT m.id, m.user_id, m.name, m.url, m.check_interval, m.request_timeout, m.expected_status,
+		        m.status, m.is_active, m.next_check_at, m.last_checked_at, m.last_status_code,
+		        m.last_response_ms, m.consecutive_failures, m.notes, m.created_at, m.updated_at,
+		        (
+		          SELECT COALESCE(
+		            (SUM(CASE WHEN is_success THEN 1.0 ELSE 0.0 END) / NULLIF(COUNT(*), 0)) * 100.0,
+		            100.0
+		          )
+		          FROM monitor_checks
+		          WHERE monitor_id = m.id
+		            AND checked_at >= NOW() - INTERVAL '24 hours'
+		        ) AS availability_24h
+		 FROM monitors m %s
+		 ORDER BY m.created_at DESC
 		 LIMIT $%d OFFSET $%d`, where, argIdx, argIdx+1),
 		countArgs...,
 	)
@@ -135,6 +144,7 @@ func (s *Store) List(ctx context.Context, userID int64, f ListFilter) (*ListResu
 			&m.ID, &m.UserID, &m.Name, &m.URL, &m.CheckInterval, &m.RequestTimeout, &m.ExpectedStatus,
 			&m.Status, &m.IsActive, &m.NextCheckAt, &m.LastCheckedAt, &m.LastStatusCode,
 			&m.LastResponseMs, &m.ConsecutiveFailures, &m.Notes, &m.CreatedAt, &m.UpdatedAt,
+			&m.Availability24h,
 		); err != nil {
 			return nil, fmt.Errorf("scan monitor: %w", err)
 		}
